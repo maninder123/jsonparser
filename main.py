@@ -5,8 +5,9 @@ import re
 
 app = FastAPI()
 
+# Updated InputData class to match the input structure
 class InputData(BaseModel):
-    input_text: str
+    text: str
 
 class ResponseItem(BaseModel):
     type: str
@@ -19,6 +20,7 @@ class ResponseOutput(BaseModel):
 
 def parse_input(input_text: str) -> List[ResponseItem]:
     responses = []
+    
     # Split input into lines
     lines = input_text.splitlines()
     
@@ -31,7 +33,7 @@ def parse_input(input_text: str) -> List[ResponseItem]:
         image_match = re.search(image_regex, line)
         if image_match:
             image_url = image_match.group(1)
-            alt_text = "Image related to the product"  # You can enhance alt text extraction
+            alt_text = "Image related to the product"  # Enhance alt text extraction
             responses.append({"type": "image", "url": image_url, "alt_text": alt_text})
         else:
             # If it's just a text line, append as a text response
@@ -43,8 +45,8 @@ def parse_input(input_text: str) -> List[ResponseItem]:
 
 @app.post("/generate-response", response_model=ResponseOutput)
 async def generate_response(data: InputData):
-    # Parse the input text and generate responses
-    parsed_responses = parse_input(data.input_text)
+    # Parse the input text from the "text" field and generate responses
+    parsed_responses = parse_input(data.text)
     
     # Return the parsed response in the required JSON format
     return ResponseOutput(responses=parsed_responses)
