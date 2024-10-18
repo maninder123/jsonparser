@@ -28,7 +28,8 @@ def convert_image():
     base64_image = image_url_to_base64(image_url)
 
     if base64_image:
-        return jsonify({"base64_image": base64_image}), 200
+        base64_img = "data:image/png;base64," + base64_image
+        return base64_img
     else:
         return jsonify({"error": "Failed to convert image"}), 400
 
