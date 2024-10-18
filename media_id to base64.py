@@ -32,7 +32,7 @@ def get_image():
         # Convert image data to Base64
         base64_image = base64.b64encode(image_data).decode('utf-8')
 
-        return jsonify({'base64_image': base64_image})
+        return jsonify(base64_image)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
