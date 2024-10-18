@@ -5,7 +5,6 @@ import re
 
 app = FastAPI()
 
-# Updated InputData class to match the input structure
 class InputData(BaseModel):
     text: str
 
@@ -20,6 +19,7 @@ class ResponseOutput(BaseModel):
 
 def parse_input(input_text: str) -> List[ResponseItem]:
     responses = []
+    accumulated_text = ""
     
     # Split input into lines
     lines = input_text.splitlines()
@@ -27,19 +27,27 @@ def parse_input(input_text: str) -> List[ResponseItem]:
     # Regex to detect image URLs
     image_regex = r"(https?://\S+\.(?:jpg|jpeg|png|gif))"
     
-    # Traverse through the lines and parse text and image URLs
     for line in lines:
         # Check if the line contains an image URL
         image_match = re.search(image_regex, line)
+        
         if image_match:
+            # If there is accumulated text, append it as a text response
+            if accumulated_text.strip():
+                responses.append({"type": "text", "content": accumulated_text.strip()})
+                accumulated_text = ""  # Reset accumulated text
+
+            # Append the image URL as a separate response
             image_url = image_match.group(1)
-            alt_text = "Image related to the product"  # Enhance alt text extraction
+            alt_text = "Image related to the product"  # You can enhance this as needed
             responses.append({"type": "image", "url": image_url, "alt_text": alt_text})
         else:
-            # If it's just a text line, append as a text response
-            clean_text = line.strip()
-            if clean_text:
-                responses.append({"type": "text", "content": clean_text})
+            # Accumulate the text until an image is found
+            accumulated_text += line + " "
+    
+    # Append any remaining text after the last image
+    if accumulated_text.strip():
+        responses.append({"type": "text", "content": accumulated_text.strip()})
     
     return responses
 
