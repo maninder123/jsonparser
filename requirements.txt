@@ -4,4 +4,3 @@ pydantic
 
 flask
 requests
-base64
