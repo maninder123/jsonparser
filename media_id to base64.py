@@ -37,4 +37,4 @@ def get_image():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host="143.244.132.143", port=5009)
+    app.run(host="143.244.132.143", port=8084)
