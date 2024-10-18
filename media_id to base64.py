@@ -1,17 +1,23 @@
 import base64
 from flask import Flask, request, jsonify
 import requests
+import os
+from dotenv import load_dotenv
 
-
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
 @app.route('/get_image', methods=['POST'])
 def get_image():
     media_id = request.json.get('media_id')
+
+    # Get token from environment variable
+    auth_token = os.getenv('AUTH_TOKEN')
+
     headers = {
-            "Authorization": f"Bearer EAAPHZC1SC48ABO9LD4Gu4NZCO6lpWSwkgAWYEgPWXdT8wzCSaLokUlISD7hOgMxzZCXr8RXZCHCOdbUpNakCMQsWuDKiDIH9yZCZAIxKgcP65u3gOqOk4cjrvbdZBFNTBDT6fRweAO1YKEuwRUKLDzkvVcwShWyxcwPS6DMbBHuVzGO82BH7E3rRXkRZB0SnlEZA9kAZDZD",
-            # "User-Agent": self.user_agent
+            "Authorization": f"Bearer {auth_token}",
         }
     if not media_id:
         return jsonify({'error': 'Media ID is required'}), 400
@@ -31,8 +37,10 @@ def get_image():
 
         # Convert image data to Base64
         base64_image = base64.b64encode(image_data).decode('utf-8')
-
-        return jsonify(base64_image)
+        # Prepend the data URI scheme and return it
+        base64_img = "data:image/png;base64," + base64_image
+        
+        return base64_img
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
