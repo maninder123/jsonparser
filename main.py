@@ -43,7 +43,7 @@ def parse_input(input_text: str) -> List[ResponseItem]:
             responses.append({"type": "image", "url": image_url, "alt_text": alt_text})
         else:
             # Accumulate the text until an image is found
-            accumulated_text += line + " "
+            accumulated_text += line + "\n"
     
     # Append any remaining text after the last image
     if accumulated_text.strip():
