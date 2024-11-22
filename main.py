@@ -1,29 +1,60 @@
-import base64
-from flask import Flask, request, jsonify
-import requests
 import os
+import requests
+from requests.auth import HTTPBasicAuth
+import base64
+import logging
+from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import re
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 
-def image_url_to_base64(image_url):
+# Twilio Media Download and Encode
+def download_and_encode_twilio_image(media_url):
+    """
+    Downloads an image from a Twilio media URL and converts it to base64.
+
+    Args:
+        media_url (str): Twilio media URL for the image
+
+    Returns:
+        str: Base64 encoded image data, or None if download fails
+    """
+    TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+    TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN:
+        logger.error("Twilio credentials not found in environment variables")
+        return None
+
     try:
-        # Send a GET request to the image URL
-        response = requests.get(image_url)
-        # Check if the request was successful
+        response = requests.get(
+            media_url,
+            stream=True,
+            auth=HTTPBasicAuth(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        )
+
         if response.status_code == 200:
-            # Encode the image content to base64
-            base64_image = base64.b64encode(response.content).decode('utf-8')
+            base64_image = base64.b64encode(response.content).decode("utf-8")
             return base64_image
         else:
+            logger.error(f"Failed to download media: {response.status_code}")
             return None
+
     except Exception as e:
+        logger.error(f"Error occurred while downloading Twilio media: {str(e)}")
         return None
-    
+
 
 # Function to parse input text and generate the responses
 def parse_input(input_text):
@@ -60,6 +91,36 @@ def parse_input(input_text):
     
     return responses
 
+# Endpoints
+@app.route("/process-image", methods=["POST"])
+def process_twilio_image():
+    media_url = request.form.get("MediaUrl0")
+
+    if not media_url:
+        return jsonify({"error": "No media URL provided"}), 400
+
+    base64_image = download_and_encode_twilio_image(media_url)
+
+    if base64_image:
+        return jsonify({"base64_image": base64_image, "status": "success"})
+    else:
+        return jsonify({"error": "Failed to download or encode image", "status": "failure"}), 500
+
+
+@app.route("/get-image", methods=["POST"])
+def get_facebook_image():
+    media_id = request.json.get("media_id")
+
+    if not media_id:
+        return jsonify({"error": "Media ID is required"}), 400
+
+    base64_image = download_and_encode_facebook_image(media_id)
+
+    if base64_image:
+        return jsonify({"base64_image": base64_image, "status": "success"})
+    else:
+        return jsonify({"error": "Failed to download or encode image", "status": "failure"}), 500
+    
 # Flask route to handle POST request and return response
 @app.route("/generate-response", methods=["POST"])
 def generate_response():
@@ -109,23 +170,9 @@ def get_image():
         return base64_img
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/convert-image', methods=['POST'])
-def convert_image():
-    data = request.json
-    if 'image_url' not in data:
-        return jsonify({"error": "Missing 'image_url' field"}), 400
 
-    image_url = data['image_url']
-    base64_image = image_url_to_base64(image_url)
 
-    if base64_image:
-        base64_img = "data:image/png;base64," + base64_image
-        return base64_img
-    else:
-        return jsonify({"error": "Failed to convert image"}), 400
-    
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0',debug=True,port='5011')
-
+if __name__ == "__main__":
+    port = int(os.getenv("PORT"))
+    host = os.getenv("HOST")
+    app.run(host=host, port=port, debug=True)
