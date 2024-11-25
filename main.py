@@ -121,10 +121,12 @@ def process_twilio_image():
     base64_image = download_and_encode_twilio_image(media_url)
     
     if base64_image:
-        return jsonify({
-            "base64_image": f"data:image/png;base64,{base64_image}",
-            "status": "success"
-        })
+        return f"data:image/png;base64,{base64_image}"
+        
+        # return jsonify({
+        #     "base64_image": f"data:image/png;base64,{base64_image}",
+        #     "status": "success"
+        # })
     else:
         return jsonify({
             "error": "Failed to download or encode image",
