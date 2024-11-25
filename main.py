@@ -92,34 +92,33 @@ def parse_input(input_text):
     return responses
 
 # Endpoints
-@app.route("/process-image", methods=["POST"])
+@app.route('/process-image', methods=['POST'])
 def process_twilio_image():
-    media_url = request.form.get("MediaUrl0")
-
+    # Get MediaUrl0 from form data
+    media_url = request.form.get('MediaUrl0')
+    
     if not media_url:
-        return jsonify({"error": "No media URL provided"}), 400
-
+        return jsonify({
+            "error": "No media URL provided",
+            "status": "failure"
+        }), 400
+    
+    # Download and encode the image
     base64_image = download_and_encode_twilio_image(media_url)
-
+    
     if base64_image:
-        return jsonify({"base64_image": base64_image, "status": "success"})
+        return jsonify({
+            "base64_image": f"data:image/png;base64,{base64_image}",
+            "status": "success"
+        })
     else:
-        return jsonify({"error": "Failed to download or encode image", "status": "failure"}), 500
+        return jsonify({
+            "error": "Failed to download or encode image",
+            "status": "failure"
+        }), 500
 
 
-@app.route("/get-image", methods=["POST"])
-def get_facebook_image():
-    media_id = request.json.get("media_id")
 
-    if not media_id:
-        return jsonify({"error": "Media ID is required"}), 400
-
-    base64_image = download_and_encode_facebook_image(media_id)
-
-    if base64_image:
-        return jsonify({"base64_image": base64_image, "status": "success"})
-    else:
-        return jsonify({"error": "Failed to download or encode image", "status": "failure"}), 500
     
 # Flask route to handle POST request and return response
 @app.route("/generate-response", methods=["POST"])
