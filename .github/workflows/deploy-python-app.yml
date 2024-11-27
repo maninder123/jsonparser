@@ -48,6 +48,7 @@ jobs:
           cd ~/JSONPARSER
           ls 
           pwd
+          export PIP_NO_PYTHON_VERSION_WARNING=1
           # python3 -m pip install --upgrade pip==20.0.2
           pip install -r requirements.txt
           export $(cat .env | xargs)  # Load .env variables
