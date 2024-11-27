@@ -46,7 +46,9 @@ jobs:
         # Install dependencies and run the application with the environment
         $SSH_CMD << 'EOF'
           cd ~/JSONPARSER
-          python3 -m pip install --upgrade pip
+          ls 
+          pwd
+          python3 -m pip install --upgrade pip==20.0.2
           pip install -r requirements.txt
           export $(cat .env | xargs)  # Load .env variables
           nohup python3 main.py > app.log 2>&1 &
