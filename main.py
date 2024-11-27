@@ -19,31 +19,17 @@ load_dotenv()
 
 app = Flask(__name__)
 
-def image_url_to_base64(image_url):
-    try:
-        # Send a GET request to the image URL
-        response = requests.get(image_url)
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Encode the image content to base64
-            base64_image = base64.b64encode(response.content).decode('utf-8')
-            return base64_image
-        else:
-            return None
-    except Exception as e:
-        return None
-
-# Twilio Media Download and Encode
+# Utility Function: Twilio Media Download and Encode
 def download_and_encode_twilio_image(media_url):
-    """
+    '''
     Downloads an image from a Twilio media URL and converts it to base64.
 
     Args:
-        media_url (str): Twilio media URL for the image
+        media_url (str): Twilio media URL for the image.
 
     Returns:
-        str: Base64 encoded image data, or None if download fails
-    """
+        str: Base64 encoded image data, or None if download fails.
+    '''
     TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
     TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 
@@ -72,6 +58,16 @@ def download_and_encode_twilio_image(media_url):
 
 # Function to parse input text and generate the responses
 def parse_input(input_text):
+    '''
+    Parses input text for plain text and image URLs and generates a structured response.
+
+    Args:
+        input_text (str): Input text containing plain text and/or image URLs.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary represents a parsed response 
+              (either text or image).
+    '''
     responses = []
     accumulated_text = ""
     
@@ -105,10 +101,27 @@ def parse_input(input_text):
     
     return responses
 
-# Endpoints
+
+# Flask Endpoint: Process Twilio Image
 @app.route('/process-image', methods=['POST'])
 def process_twilio_image():
-    # Get MediaUrl0 from form data
+    '''
+    API Endpoint: /process-image
+    ----------------------------
+    Processes an image sent via Twilio by downloading it from the provided MediaUrl0,
+    encoding it in base64 format, and returning the encoded image.
+
+    Method: POST
+
+    Request:
+        - Form Data:
+            - MediaUrl0 (string): The URL of the image sent via Twilio.
+
+    Responses:
+        - 200 OK: Base64 encoded image string.
+        - 400 Bad Request: Error for missing or invalid MediaUrl0.
+        - 500 Internal Server Error: Error for download or encode failure.
+    '''
     media_url = request.form.get('MediaUrl0')
     
     if not media_url:
@@ -116,93 +129,57 @@ def process_twilio_image():
             "error": "No media URL provided",
             "status": "failure"
         }), 400
-    
-    # Download and encode the image
+       # Download and encode the image
     base64_image = download_and_encode_twilio_image(media_url)
     
     if base64_image:
         return f"data:image/png;base64,{base64_image}"
-        
-        # return jsonify({
-        #     "base64_image": f"data:image/png;base64,{base64_image}",
-        #     "status": "success"
-        # })
     else:
         return jsonify({
             "error": "Failed to download or encode image",
             "status": "failure"
         }), 500
 
-
-
     
-# Flask route to handle POST request and return response
+# Flask Endpoint: Generate Response
 @app.route("/generate-response", methods=["POST"])
 def generate_response():
+    '''
+    API Endpoint: /generate-response
+    --------------------------------
+    Parses the input text for image URLs and plain text, generating a structured 
+    JSON response.
+
+    Method: POST
+
+    Request:
+        - JSON Body:
+            {
+                "text": "<input_text>"
+            }
+
+    Responses:
+        - 200 OK: Structured JSON response containing text and images.
+        - 400 Bad Request: Error for missing or invalid input text.
+    '''
     data = request.get_json()
-    
     # Validate the input text
     if "text" not in data:
         return jsonify({"error": "Invalid input, 'text' field is required"}), 400
-    
-    # Parse the input text and generate responses
+      # Parse the input text and generate responses
     parsed_responses = parse_input(data["text"])
-    
-    # Return the parsed response in JSON format
+     # Return the parsed response in JSON format
     return jsonify({"responses": parsed_responses})
 
-@app.route('/get_image', methods=['POST'])
-def get_image():
-    media_id = request.json.get('media_id')
 
-    # Get token from environment variable
-    auth_token = os.getenv('AUTH_TOKEN')
-
-    headers = {
-            "Authorization": f"Bearer {auth_token}",
-        }
-    if not media_id:
-        return jsonify({'error': 'Media ID is required'}), 400
-
-    try:
-        # Call WhatsApp media retrieval URL to get the media URL
-        media_url_response = requests.get(f'https://graph.facebook.com/v19.0/{media_id}?phone_number_id=359029663964957',headers=headers)
-        media_url_data = media_url_response.json()
-        media_url = media_url_data.get('url', None)
-
-        if not media_url:
-            return jsonify({'error': 'Failed to retrieve media URL'}), 400
-
-        # Call WhatsApp media download API to get the image
-        image_response = requests.get(media_url,headers=headers)
-        image_data = image_response.content
-
-        # Convert image data to Base64
-        base64_image = base64.b64encode(image_data).decode('utf-8')
-        # Prepend the data URI scheme and return it
-        base64_img = "data:image/png;base64," + base64_image
-        
-        return base64_img
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-@app.route('/convert-image', methods=['POST'])
-def convert_image():
-    data = request.json
-    if 'image_url' not in data:
-        return jsonify({"error": "Missing 'image_url' field"}), 400
-
-    image_url = data['image_url']
-    base64_image = image_url_to_base64(image_url)
-
-    if base64_image:
-        base64_img = "data:image/png;base64," + base64_image
-        return base64_img
-    else:
-        return jsonify({"error": "Failed to convert image"}), 400
-
-
+# Main Entry Point
 if __name__ == "__main__":
+    '''
+    Main Entry Point for the Flask Application
+    ------------------------------------------
+    Configures and starts the Flask server using environment variables for host 
+    and port.
+    '''
     port = int(os.getenv("PORT"))
     host = os.getenv("HOST")
     app.run(host=host, port=port, debug=True)
