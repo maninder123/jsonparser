@@ -49,7 +49,10 @@ jobs:
           ls 
           pwd
           ls
-          pip3 install -r requirements.txt
+          python3 -m venv myenv
+          source myenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
           ls
           export $(cat .env | xargs)  # Load .env variables
           nohup python3 main.py > app.log 2>&1 &
