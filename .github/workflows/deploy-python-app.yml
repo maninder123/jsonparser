@@ -1,0 +1,53 @@
+name: Deploy Python App
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository on Runner
+      uses: actions/checkout@v3
+
+    - name: Deploy Code to Server
+      env:
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}   # Add this as a GitHub secret
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}   # Add this as a GitHub secret
+        REMOTE_PASSWORD: ${{ secrets.REMOTE_PASSWORD }} # Add this as a GitHub secret
+        ENV_VARS: |
+          TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+          DOWNLOAD_DIR=${{ secrets.DOWNLOAD_DIR }}
+          PORT=${{ secrets.PORT }}
+          HOST=${{ secrets.HOST }}
+      run: |
+        # Install SSHpass for password-based SSH login
+        ls
+        pwd
+        sudo apt-get update && sudo apt-get install -y sshpass
+
+        # Define SSH command with password
+        SSH_CMD="sshpass -p $REMOTE_PASSWORD ssh -o StrictHostKeyChecking=no $REMOTE_USER@$REMOTE_HOST"
+
+        # Clone repository directly on the server
+        $SSH_CMD "rm -rf ~/JSONPARSER && mkdir ~/JSONPARSER"
+        sshpass -p $REMOTE_PASSWORD scp -o StrictHostKeyChecking=no -r ./* $REMOTE_USER@$REMOTE_HOST:~/JSONPARSER/
+
+        # Transfer environment variables to a `.env` file on the server
+        $SSH_CMD << EOF
+          echo "$ENV_VARS" > ~/JSONPARSER/.env
+          chmod 600 ~/JSONPARSER/.env
+        EOF
+
+        # Install dependencies and run the application with the environment
+        $SSH_CMD << 'EOF'
+          cd ~/JSONPARSER
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          export $(cat .env | xargs)  # Load .env variables
+          nohup python3 main.py > app.log 2>&1 &
+        EOF
