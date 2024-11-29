@@ -264,10 +264,11 @@ def process_twilio_audio():
     base64_audio = download_and_encode_twilio_audio(media_url)
     
     if base64_audio:
-        return jsonify({
-            "base64_audio": f"data:audio/wav;base64,{base64_audio}",
-            "status": "success"
-        }), 200
+        # return jsonify({
+        #     "base64_audio": f"data:audio/wav;base64,{base64_audio}",
+        #     "status": "success"
+        # }), 200
+        return f"data:audio/wav;base64,{base64_audio}"
     else:
         return jsonify({
             "error": "Failed to download or encode audio",
